@@ -20,23 +20,36 @@ third_truck = Truck(
     "Truck Three"
 )
 
-# Returns the index position of the specified address within the address list.
 def lookup_address_index(address):
+    # Map known variants of package #9's addresses to the correct CSV entry.
+    mapping = {
+         "410 S. State St., Salt Lake City, UT 84111": "300 State St",
+         "300 State St. Salt Lake City, UT, 84103": "300 State St",
+         "300 State St. Salt Lake City, UT 84103": "300 State St"
+    }
+    if address in mapping:
+         address = mapping[address]
     return address_data.index(address)
+
+
+
 
 # Calculates the distance between two addresses by referencing the distance matrix.
 def compute_distance(address1, address2):
     return float(distance_data[lookup_address_index(address1)][lookup_address_index(address2)])
 
-# Finds the next closest delivery location by determining the minimal distance from the truck's current location.
+# Update the function to obtain the package address via get_address() for package #9.
 def find_nearest_delivery(truck):
     travel_distances = []
-    # Iterate over all packages that have yet to be delivered.
     for package_id in truck.not_delivered:
-        package_address = hash_table.search(package_id).address
+        package_obj = hash_table.search(package_id)
+        # Use get_address to get the current address for package #9.
+        if package_obj.package_id == 9:
+            package_address = package_obj.get_address(truck.current_time)
+        else:
+            package_address = package_obj.address
         distance_val = compute_distance(truck.current_address, package_address)
         travel_distances.append(float(distance_val))
-    # Identify the shortest travel distance and its corresponding index.
     closest_distance = min(travel_distances)
     closest_index = travel_distances.index(closest_distance)
     return closest_index, closest_distance
@@ -55,15 +68,19 @@ def execute_delivery(truck):
     while truck.not_delivered:
         nearest_idx, travel_distance = find_nearest_delivery(truck)
         target_package = hash_table.search(truck.not_delivered[nearest_idx])
-        truck.current_address = target_package.address
+        # Update truck.current_address using the package's current (possibly corrected) address.
+        if target_package.package_id == 9:
+            updated_address = target_package.get_address(truck.current_time)
+        else:
+            updated_address = target_package.address
+        truck.current_address = updated_address
         truck.miles_traveled += travel_distance
-        # Update the truck's current time based on the travel duration (assuming a speed of 18 mph).
+        # Update current time based on the travel duration (assuming 18 mph).
         truck.current_time += datetime.timedelta(hours=travel_distance / 18)
-        # Mark the package as delivered and record its delivery time.
+        # Mark the package as delivered.
         target_package.status = "delivered"
         target_package.delivery_time = truck.current_time
-        target_package.delivered_by = truck.truck_id  #record the truck identifier
-        # Transfer the package from the undelivered list to the delivered list.
+        target_package.delivered_by = truck.truck_id  # record truck identifier
         truck.delivered.append(truck.not_delivered[nearest_idx])
         truck.not_delivered.remove(truck.not_delivered[nearest_idx])
 
