@@ -33,17 +33,27 @@ class Package:
         street, city, state, zip_code = self.get_address_components(current_time)
         return f"{street}, {city}, {state} {zip_code}"
 
+    #Method to retrieve all package details based on a given time input.
+    """
+    It returns data such as the package ID, address, city, state, zip code, deadline, weight, status, and notes
+    with the delivery time when applicable. Also, it returns which truck is carrying the package when it is en route or when its delivered. 
+    """
     # Updated fetch_details uses get_address_components to display address parts.
     def fetch_details(self, current_time):
         # Get the proper address components.
         street, city, state, zip_code = self.get_address_components(current_time)
-
+        # If the package has been delivered.    
         if self.delivery_time is not None and current_time >= self.delivery_time:
             current_status = (
                 f"Status: delivered\t Delivered Time: {self.delivery_time}\t Delivered by: {self.delivered_by}"
             )
+         # If the package is delayed and hasn't yet reached the hub (before 09:05:00).
+        elif self.package_id in [6, 25, 28, 32] and current_time < datetime.timedelta(hours=9, minutes=5):
+            current_status = "Status: delayed on flight"
+        # If the package is en route (i.e. after departure but before delivery).
         elif self.delivery_time is not None and self.departure_time is not None and self.delivery_time > current_time > self.departure_time:
             current_status = f"Status: en route {self.en_route_truck}"
+        # Otherwise, the package is at the hub.    
         else:
             current_status = "Status: at hub"
 
